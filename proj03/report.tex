@@ -1,0 +1,198 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usepackage{pgfplots, pgfplotstable}
+\usepackage{caption}
+\usepackage{listings}
+\lstset{language=Python}
+
+\title{MC886 - Machine learning \\ Exercise 3}
+\author{Rafael Almeida Erthal Hermano\\RA 121286}
+\date{March 2014}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\section{The Data}
+The data consists of 208 records with 60 float attributes divided in two categories M and R. To read the records the following function was implemented:
+
+\begin{lstlisting}
+def read_data(file_name):
+    cast_int = lambda x: 1 if x == 'M' else 0
+    lines    = open(file_name,'r').readlines()
+    random.shuffle(lines)
+    records  = [line[0:-1].split(',') for line in lines]
+    data     = [map(float, record[0:-1]) for record in records]
+    labels   = [cast_int(record[-1]) for record in records]
+    return (data, labels)
+\end{lstlisting}
+
+\subsection{Normalization}
+Since the range of values of raw data varies widely for all the attributes, all data were normalized. To normalize the data, the following algorithm was used:
+
+\begin{lstlisting}
+from sklearn.preprocessing import normalize
+
+data = read_data("./data.csv")
+data = (normalize(data[0]).tolist(), data[1])
+\end{lstlisting}
+
+\subsection{PCA}
+To calculate the explained variance ratio for the PCA the following algorithm was used:
+
+\begin{lstlisting}
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import normalize
+
+data = read_data("./data.csv")
+data = (normalize(data[0]).tolist(), data[1])
+pca  = PCA(n_components=12)
+pca.fit(data[0])
+print pca.explained_variance_ratio_
+\end{lstlisting}
+
+\newpage
+
+The explained variance ratio of PCA for the data is:
+\begin{table}[h]
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        3.25160817e-01 & 2.30044162e-01 & 8.18310432e-02 & 5.40822620e-02  \\ \hline
+        4.95178506e-02 & 4.48041248e-02 & 2.77150509e-02 & 2.44255055e-02  \\ \hline
+        2.18162254e-02 & 1.81540290e-02 & 1.56843099e-02 & 1.36269589e-02  \\ \hline
+        1.04542793e-02 & 9.75404353e-03 & 8.46331106e-03 & 8.00442422e-03  \\ \hline
+        6.96372853e-03 & 6.43937332e-03 & 5.24953069e-03 & 4.93475552e-03  \\ \hline
+        3.90555745e-03 & 3.18341858e-03 & 2.98205227e-03 & 2.70508374e-03  \\ \hline
+        2.46705021e-03 & 2.43347620e-03 & 1.68290840e-03 & 1.55759299e-03  \\ \hline
+        1.32552228e-03 & 1.28277492e-03 & 1.03133211e-03 & 1.01008719e-03  \\ \hline
+        8.40102991e-04 & 7.64660214e-04 & 7.28838563e-04 & 7.04503775e-04  \\ \hline
+        5.97343704e-04 & 5.55480000e-04 & 5.19385223e-04 & 4.30334642e-04  \\ \hline
+        4.11887098e-04 & 4.02593460e-04 & 2.92852050e-04 & 2.47910970e-04  \\ \hline
+        2.01365888e-04 & 1.55951429e-04 & 9.64672471e-05 & 8.31676505e-05  \\ \hline
+        7.47483117e-05 & 5.25182188e-05 & 3.41429105e-05 & 2.69003914e-05  \\ \hline
+        2.11414838e-05 & 1.58923099e-05 & 1.30708767e-05 & 1.12506291e-05  \\ \hline
+        8.17082564e-06 & 6.88571694e-06 & 6.03689106e-06 & 3.75472260e-06  \\ \hline
+    \end{tabular}
+\end{table}
+So to keep more than 90 percent of variance we should use 12 dimensions.
+
+\section{Cross validation}
+To generate folds, the following function was implemented:
+
+\begin{lstlisting}
+def fold(quantity, data):
+    size = len(data[0]) / quantity
+    for i in range(0, quantity):
+        p     = i * size
+        train = (data[0][0:p] + data[0][p + size:], data[1][0:p] + data[1][p + size:])
+        test  = (data[0][p: p + size], data[1][p: p + size])
+        yield (train, test)
+\end{lstlisting}
+
+To perform the grid search, the following function was implemented:
+
+\begin{lstlisting}
+def best_grid(data, grid, Classifier):
+    best_k          = 0
+    highest_matches = 0
+    for K in grid:
+        matches = 0
+        for train, test in fold(5, data):
+            classifier = Classifier(K)
+            classifier.fit(train[0], train[1])
+            matches += correct_predictions(classifier, test)
+        if matches > highest_matches:
+            best_k = K
+            highest_matches = matches
+    return best_k
+\end{lstlisting}
+
+\newpage
+
+And to calculate the matching rate for all folds the following function was implemented:
+
+\begin{lstlisting}
+def rates(data, grid, Classifier):
+    rates = []
+    for train, test in fold(5, data):
+        classifier = Classifier(best_grid(train, grid, Classifier))
+        classifier.fit(train[0], train[1])
+        rate = correct_predictions(classifier, test) / float(len(test[0]))
+        rates.append(rate)
+    return rates
+\end{lstlisting}
+
+\section{Algorithms}
+
+\subsection{KNN}
+The data was split into 5 folds, for each fold, the training data was split into another 5 folds, for each sub fold, was performed a grid search to calculate the best hiper parameter K. After choosing the best K, the entire training set of the original fold was used to choose the best K for the final classifier, and after that calculated the match rate of the fold with the best K.
+
+\begin{table}[h]
+    \begin{tabular}{|l|l|l|l|l|}
+    \cline{1-2} \cline{4-5}
+    \multicolumn{2}{|c|}{Without PCA} &  & \multicolumn{2}{|c|}{With PCA} \\ \cline{1-2} \cline{4-5}
+    Fold match rate & Best K &  & Fold match rate & Best K  \\ \cline{1-2} \cline{4-5} 
+    0.82 & 1 &  & 0.82 & 1  \\ \cline{1-2} \cline{4-5} 
+    0.92 & 1 &  & 0.90 & 1  \\ \cline{1-2} \cline{4-5} 
+    0.82 & 1 &  & 0.90 & 1  \\ \cline{1-2} \cline{4-5} 
+    0.80 & 1 &  & 0.78 & 1  \\ \cline{1-2} \cline{4-5} 
+    0.75 & 1 &  & 0.78 & 3  \\ \cline{1-2} \cline{4-5}
+    \end{tabular}
+\end{table}
+
+The mean for the KNN without PCA is $0.82 \pm 0.05$ and the mean for the KNN with PCA is $0.83 \pm 0.05$. So for the KNN with this data is irrelevant to use use PCA and the hiper parameter doesn't vary a lot from each fold.
+
+\subsection{Linear SVM}
+
+\begin{table}[h]
+    \begin{tabular}{|l|l|l|l|l|}
+    \cline{1-2} \cline{4-5}
+    \multicolumn{2}{|c|}{Without PCA} &  & \multicolumn{2}{|c|}{With PCA} \\ \cline{1-2} \cline{4-5}
+    Fold match rate & Best C &  & Fold match rate & Best C  \\ \cline{1-2} \cline{4-5} 
+    0.80 & 10 &  & 0.82 & 1000  \\ \cline{1-2} \cline{4-5} 
+    0.78 & 10 &  & 0.82 & 10000  \\ \cline{1-2} \cline{4-5} 
+    0.73 & 10 &  & 0.75 & 100  \\ \cline{1-2} \cline{4-5} 
+    0.78 & 10 &  & 0.78 & 1000  \\ \cline{1-2} \cline{4-5} 
+    0.80 & 10 &  & 0.78 & 100  \\ \cline{1-2} \cline{4-5}
+    \end{tabular}
+\end{table}
+
+The mean for the linear SVM without PCA is $0.78 \pm 0.02$ and the mean for the linear SVM with PCA is $0.79 \pm 0.02$. So for the linear SVM with this data is irrelevant to use use PCA. Its important to notice that after applying PCA, the hiper parameter C started to vary from each fold, while without PCA it doesn't vary a lot.
+
+\subsection{RBF SVM}
+
+\begin{table}[h]
+    \begin{tabular}{|l|l|l|l|l|l|l|}
+    \cline{1-3} \cline{5-7}
+    \multicolumn{3}{|c|}{Without PCA} &  & \multicolumn{3}{|c|}{With PCA} \\ \cline{1-3} \cline{5-7}
+    Fold match rate & Best C & Best Gamma &  & Fold match rate & Best C & Best Gamma  \\ \cline{1-3} \cline{5-7}
+    0.87 & 10 & 10 &  & 0.75 & 100 & 100   \\ \cline{1-3} \cline{5-7}
+    0.97 & 10 & 10 &  & 0.85 & 10 & 10   \\ \cline{1-3} \cline{5-7}
+    0.82 & 10 & 10 &  & 0.78 & 10 & 10   \\ \cline{1-3} \cline{5-7}
+    0.90 & 10 & 10 &  & 0.87 & 10 & 10   \\ \cline{1-3} \cline{5-7}
+    0.82 & 10 & 10 &  & 0.78 & 10 & 10   \\ \cline{1-3} \cline{5-7}
+    \end{tabular}
+\end{table}
+
+The mean for the linear SVM without PCA is $0.88 \pm 0.05$ and the mean for the linear SVM with PCA is $0.80 \pm 0.04$. So for the linear SVM with this data is irrelevant to use use PCA and the hiper parameters doesn't vary from each fold.
+
+\subsection{Random Forest}
+
+\begin{table}[h]
+    \begin{tabular}{|l|l|l|l|l|}
+    \cline{1-2} \cline{4-5}
+    \multicolumn{2}{|c|}{Without PCA} &  & \multicolumn{2}{|c|}{With PCA} \\ \cline{1-2} \cline{4-5}
+    Fold match rate & Best mtry &  & Fold match rate & Best mtry  \\ \cline{1-2} \cline{4-5} 
+    0.80 & 60 &  & 0.70 & 40  \\ \cline{1-2} \cline{4-5} 
+    0.85 & 60 &  & 0.78 & 2   \\ \cline{1-2} \cline{4-5} 
+    0.70 & 10 &  & 0.82 & 20  \\ \cline{1-2} \cline{4-5} 
+    0.78 & 40 &  & 0.82 & 3   \\ \cline{1-2} \cline{4-5} 
+    0.87 & 10 &  & 0.70 & 10  \\ \cline{1-2} \cline{4-5}
+    \end{tabular}
+\end{table}
+
+The mean for the random forest without PCA is $0.82 \pm 0.05$ and the mean for the random forest with PCA is $0.83 \pm 0.05$. So for the random forest with this data is irrelevant to use use PCA and the hiper parameter vary a lot from each fold.
+
+\end{document}
