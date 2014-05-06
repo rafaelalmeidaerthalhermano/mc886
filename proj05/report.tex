@@ -1,0 +1,134 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usepackage{pgfplots, pgfplotstable}
+\usepackage{caption}
+\usepackage{listings}
+\lstset{language=Python}
+
+\title{MC886 - Machine learning \\ Exercise 4}
+\author{Rafael Almeida Erthal Hermano\\RA 121286}
+\date{May 2014}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\section{The Data}
+The data, consists of 4500 data records and 3693 test records of nine dimensional vectors of float values. To read the data, the following function was implemented:
+
+\begin{lstlisting}
+read = lambda f: [map(float, l.split(' ')[0:-1]) for l in open(f,'r')]
+data = lambda r: [e[0:-1] for e in r]
+labels = lambda r: [e[-1] for e in r]
+\end{lstlisting}
+
+\section{Validation}
+The data came with a separate set for train and test, but, to perform the grid search and choose the best parameters for each algorithm, the following function to make a holdout was implemented:
+
+\begin{lstlisting}
+import random.random as rand
+def hold_out(X):
+    trn, tst = [], []
+    for i in X: tst.append(i) if int(rand() * 4) == 0 else trn.append(i)
+    return trn, tst
+\end{lstlisting}
+
+\section{Grid Search}
+So, two sets were created, one for training and one for validation. The train set with $\frac{3}{4}$ and test set with $\frac{1}{4}$ of the 4500 data records. For each hiper parameter, a classifier was trained with the training set and the mean square error was measured with the validation set. The hiper parameter with the highest match rate was chosen to create the final classifier, which where trained with the entire data set.
+
+\section{Results}
+\subsection{Multiple Logistic Regression}
+The multiple logistic regression had a mean square error for the entire test set of $4.34$
+
+\newpage
+\subsection{Random Forest}
+The random forest had the following mean square error for each parameter:
+
+\begin{table}[h]
+\begin{tabular}{|l|l|}
+\hline
+\textbf{n\_features} & \textbf{mean square error} \\ \hline
+2 & 2.84921554058 \\ \hline
+3 & 1.88362670875 \\ \hline
+4 & 1.60832806825 \\ \hline
+5 & 1.38595187093 \\ \hline
+\end{tabular}
+\end{table}
+
+So the chosen parameter was 5 and the mean square error for the entire test set was $4.18$.
+
+\subsection{K-neighbors}
+The random forest had the following mean square error for each parameter:
+
+\begin{table}[h]
+\begin{tabular}{|l|l|}
+\hline
+\textbf{n\_features} & \textbf{mean square error} \\ \hline
+ 1 & 2.34881144205 \\ \hline
+ 2 & 1.88486903738 \\ \hline
+ 5 & 1.51897168206 \\ \hline
+10 & 1.52791043311 \\ \hline
+20 & 1.52674144109 \\ \hline
+\end{tabular}
+\end{table}
+
+So the chosen parameter was 5 and the mean square error for the entire test set was $4.64$.
+
+\subsection{Neural Network}
+The feed-forward neural network with one hidden layer had the following mean square error for each parameter:
+
+\begin{table}[h]
+\begin{tabular}{|l|l|}
+\hline
+\textbf{n\_features} & \textbf{mean square error} \\ \hline
+ 1 & 7.31825304972 \\ \hline
+ 2 & 7.31820599895 \\ \hline
+ 5 & 7.31825413878 \\ \hline
+10 & 7.31745096069 \\ \hline
+20 & 7.31586773324 \\ \hline
+\end{tabular}
+\end{table}
+
+So the chosen parameter was 10 and the mean square error for the entire test set was $11.86$.
+
+\subsection{SVM}
+The random forest had the following mean square error for each parameter:
+
+\begin{table}[h]
+\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|}
+\hline
+ & $10^{-3}$ & $10^{-2}$ & $10^{-1}$ & $10^{0}$ & $10^{1}$ & $10^{2}$ & $10^{3}$ & $10^{4}$ & $10^{5}$ \\ \hline
+ $10^{-3}$ & 18.35 & 8.83 & 11.64 & 23.61 & 28.33 & 28.36 & 28.36 & 28.36 & 28.36  \\ \hline
+ $10^{-2}$ & 6.65 & 5.01 & 5.22 & 14.77 & 27.98 & 28.29 & 28.29 & 28.29 & 28.29  \\ \hline
+ $10^{-1}$ & 3.93 & 3.96 & 3.54 & 8.59 & 26.14 & 27.60 & 27.60 & 27.60 & 27.60  \\ \hline
+ $10^{0}$  & 2.80 & 2.98 & 3.45 & 8.15 & 26.35 & 28.16 & 28.17 & 28.17 & 28.17  \\ \hline
+ $10^{1}$  & 2.14 & 1.94 & 3.45 & 8.15 & 26.35 & 28.16 & 28.17 & 28.17 & 28.17  \\ \hline
+ $10^{2}$  & 1.68 & 1.96 & 3.45 & 8.15 & 26.35 & 28.16 & 28.17 & 28.17 & 28.17  \\ \hline
+ $10^{3}$  & 1.94 & 1.96 & 3.45 & 8.15 & 26.35 & 28.16 & 28.17 & 28.17 & 28.17  \\ \hline
+ $10^{4}$  & 1.90 & 1.96 & 3.45 & 8.15 & 26.35 & 28.16 & 28.17 & 28.17 & 28.17  \\ \hline
+ $10^{5}$  & 1.94 & 1.96 & 3.45 & 8.15 & 26.35 & 28.16 & 28.17 & 28.17 & 28.17  \\ \hline
+\end{tabular}
+\end{table}
+
+So the chosen parameter was $C=100$ and $gamma=0.001$ and the mean square error for the entire test set was $5.63$.
+
+\subsection{Radial Basis Function}
+The radial basis function had the following mean square error for each parameter:
+
+\begin{table}[h]
+\begin{tabular}{|l|l|}
+\hline
+\textbf{n\_features} & \textbf{mean square error} \\ \hline
+ 1 & 7.5002600352 \\ \hline
+ 2 & 7.49966620093 \\ \hline
+ 5 & 7.49986156405 \\ \hline
+10 & 7.4972618679 \\ \hline
+20 & 7.49905265512 \\ \hline
+\end{tabular}
+\end{table}
+
+So the chosen parameter was 10 and the mean square error for the entire test set was $13.54$.
+
+\end{document}
